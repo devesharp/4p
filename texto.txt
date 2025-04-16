@@ -1,0 +1,2 @@
+nome, cpf ou cnpj, valor
+outros valores devem ser alterados no db

@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: p4-payments-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: p4_payments
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - p4-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: p4-payments-phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "9090:80"
+    depends_on:
+      - mysql
+    networks:
+      - p4-network
+
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: p4-payments-app
+  #   restart: always
+  #   depends_on:
+  #     - mysql
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - PORT=3000
+  #     - DB_HOST=mysql
+  #     - DB_USER=root
+  #     - DB_PASSWORD=password
+  #     - DB_NAME=p4_payments
+  #     - NODE_ENV=production
+  #   networks:
+  #     - p4-network
+
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: p4-payments-nginx
+  #   restart: always
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - p4-network
+
+volumes:
+  mysql-data:
+
+networks:
+  p4-network:
+    driver: bridge 
