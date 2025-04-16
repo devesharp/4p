@@ -38,6 +38,8 @@ export async function criarTransacao4p(
     defaultViewport: null,
     args: [
       "--start-maximized",
+      '--no-sandbox', 
+      '--disable-setuid-sandbox',
       `--proxy-server=${(await getProxy())}`,
     ], // Inicia o navegador maximizado
   });
