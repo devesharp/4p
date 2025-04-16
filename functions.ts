@@ -34,7 +34,7 @@ export async function criarTransacao4p(
 ): Promise<any> {
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: false, // Definido como false para visualizar o navegador em ação
+    headless: true, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
@@ -79,6 +79,8 @@ export async function criarTransacao4p(
       if (url.includes("v1/p2p/transaction/create/")) {
         try {
           const responseData = await response.json();
+
+          console.log(responseData);
 
           if (
             responseData?.info?.data?.payload_pix
