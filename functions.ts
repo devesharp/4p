@@ -34,7 +34,7 @@ export async function criarTransacao4p(
 ): Promise<any> {
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: false, // Definido como false para visualizar o navegador em ação
+    headless: true, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
