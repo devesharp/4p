@@ -23,8 +23,8 @@ export interface TransactionResult {
 async function getProxy() {
   const user = "jzvdevlw";
   const password = "3vb0ksClAMZcKo";
-  const ip = "172.98.178.68";
-  const port = "6141";
+  const ip = "104.239.13.137";
+  const port = "6766";
 
   return proxyChain.anonymizeProxy(`http://${user}:${password}@${ip}:${port}`);
 }
@@ -34,13 +34,13 @@ export async function criarTransacao4p(
 ): Promise<any> {
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: true, // Definido como false para visualizar o navegador em ação
+    headless: false, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
       '--no-sandbox', 
       '--disable-setuid-sandbox',
-      `--proxy-server=${(await getProxy())}`,
+      // `--proxy-server=${(await getProxy())}`,
     ], // Inicia o navegador maximizado
   });
 
@@ -133,6 +133,7 @@ export async function criarTransacao4p(
       waitUntil: "networkidle2",
     });
 
+    // await sleep(2000000);s
     // Aguarda 10 segundos para verificar se o modal aparece
     console.log("Aguardando possível modal...");
     await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -161,6 +162,20 @@ export async function criarTransacao4p(
     } else {
       console.log("Modal não encontrado ou já fechado.");
     }
+
+
+    console.log("Buscando o seletor #currencyTo e clicando...");
+    await page.waitForSelector("#currencyTo");
+    await page.click("#currencyTo");
+    await sleep(1000); // Aguarda 1 segundo
+    console.log("Procurando botão com 'USDC' e clicando...");
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const targetButton = buttons.find(button =>
+        button.textContent.includes("USDC")
+      );
+      if (targetButton) targetButton.click();
+    });
 
     // Preencher o campo de e-mail
     console.log("Preenchendo o campo de email...");
