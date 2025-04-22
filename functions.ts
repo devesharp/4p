@@ -4,12 +4,14 @@ import * as proxyChain from "proxy-chain";
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export interface FormularioData {
-  email: string;
-  telefone: string;
-  cpf: string;
+  email?: string;
+  telefone?: string;
+  cpf?: string;
+  cnpj?: string;
+  tipoPessoa: 'PF' | 'PJ';
   nomeCompleto: string;
   valor: string;
-  address: string;
+  address?: string;
 }
 
 export interface TransactionResult {
@@ -18,6 +20,7 @@ export interface TransactionResult {
   transactionRid: string;
   status?: string;
   error?: string;
+  explorerUrl?: string;
 }
 
 async function getProxy() {
@@ -32,9 +35,10 @@ async function getProxy() {
 export async function criarTransacao4p(
   dados: FormularioData
 ): Promise<any> {
+  
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: true, // Definido como false para visualizar o navegador em ação
+    headless: false, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
@@ -81,8 +85,6 @@ export async function criarTransacao4p(
       if (url.includes("v1/p2p/transaction/create/")) {
         try {
           const responseData = await response.json();
-
-          console.log(responseData);
 
           if (
             responseData?.info?.data?.payload_pix
@@ -187,10 +189,25 @@ export async function criarTransacao4p(
     await page.waitForSelector("#buyer_phone");
     await page.type("#buyer_phone", dados.telefone);
 
-    // Preencher o campo de CPF
-    console.log("Preenchendo o campo de CPF...");
+    // Preencher o campo de CPF ou CNPJ dependendo do tipo de pessoa
+    console.log(`Preenchendo o campo de ${dados.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}...`);
     await page.waitForSelector("#buyer_personalid");
-    await page.type("#buyer_personalid", dados.cpf);
+
+    if (dados.tipoPessoa === 'PJ') {
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const targetButton = buttons.find(button =>
+          button.textContent.includes("CNPJ")
+        );
+        if (targetButton) targetButton.click();
+      });
+    }
+
+    if (dados.tipoPessoa === 'PF') {
+      await page.type("#buyer_personalid", dados.cpf);
+    } else {
+      await page.type("#buyer_personalid", dados.cnpj);
+    }
 
     // Preencher o campo de nome completo
     console.log("Preenchendo o campo de nome completo...");
@@ -201,10 +218,11 @@ export async function criarTransacao4p(
     console.log("Preenchendo o campo de valor...");
     await page.waitForSelector("#amount_from");
     await page.evaluate(() => {
-      const input = document.querySelector("#amount_from");
+      const input = document.querySelector("#amount_from") as HTMLInputElement;
       if (input) input.value = "";
     });
-    await page.type("#amount_from", (dados.valor * 100).toString());
+    
+    await page.type("#amount_from", (parseInt(Number(dados.valor)* 100)).toString());
     await sleep(4000); // Aguarda o modal fechar
 
     // Preencher o campo de endereço
@@ -216,7 +234,7 @@ export async function criarTransacao4p(
     console.log("Marcando o checkbox de termos e políticas...");
     await page.waitForSelector('input[name="terms_policies"]');
     await page.evaluate(() => {
-      document.querySelector("#terms_policies").click();
+      (document.querySelector("#terms_policies") as HTMLInputElement).click();
     });
 
     console.log('Aguardando até que o texto "calculando..." não esteja mais na tela...');
@@ -293,8 +311,6 @@ export async function criarTransacao4p(
       console.log("Navegador fechado.");
     }
   }
-
-  console.log(transactionId, transactionRid);
 
   return {
     payloadPix,

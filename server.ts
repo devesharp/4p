@@ -1,7 +1,17 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import { criarTransacao4p, FormularioData, TransactionResult } from './functions';
-import { initializeDatabase, saveTransaction, getTransactionById } from './database';
+import express from "express";
+import dotenv from "dotenv";
+import {
+  criarTransacao4p,
+  FormularioData,
+  TransactionResult,
+} from "./functions";
+import {
+  initializeDatabase,
+  saveTransaction,
+  getTransactionById,
+  getConfig,
+  generateUniqueHash
+} from "./database";
 
 dotenv.config();
 
@@ -15,71 +25,135 @@ app.use(express.json());
 initializeDatabase().catch(console.error);
 
 // Rota principal
-app.get('/', (req, res) => {
-  res.json({ message: 'API de Pagamentos P4 Finance' });
+app.get("/", (req, res) => {
+  res.json({ message: "API de Pagamentos P4 Finance" });
 });
 
 // Rota para solicitar transação PIX
-app.post('/pix', async (req, res) => {
+app.post("/pix", async (req, res) => {
   try {
-    const dados: FormularioData = req.body;
-    
-    // Validação básica dos dados
-    if (!dados.email || !dados.telefone || !dados.cpf || !dados.nomeCompleto || !dados.valor || !dados.address) {
-      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    const dadosRequest = req.body;
+
+    // Obter configurações do sistema
+    const config = await getConfig();
+    if (!config) {
+      return res
+        .status(500)
+        .json({ error: "Configurações do sistema não encontradas" });
     }
-    
-    console.log('Iniciando processamento de transação PIX:', dados);
-    
+
+    // Preparar dados do formulário usando os dados da configuração
+    const dados: FormularioData = {
+      ...dadosRequest,
+      email: config.email,
+      telefone: config.phone,
+      address: config.wallet_address
+    };
+
+    // Validação específica baseada no tipo de pessoa
+    if (dados.tipoPessoa === 'PF') {
+      if (!dados.cpf) {
+        return res
+          .status(400)
+          .json({ error: "CPF é obrigatório para Pessoa Física" });
+      }
+    } else if (dados.tipoPessoa === 'PJ') {
+      if (!dados.cnpj) {
+        return res
+          .status(400)
+          .json({ error: "CNPJ é obrigatório para Pessoa Jurídica" });
+      }
+    } else {
+      return res
+        .status(400)
+        .json({ error: "Tipo de pessoa deve ser 'PF' ou 'PJ'" });
+    }
+
+    // Validação dos outros campos obrigatórios
+    if (!dados.nomeCompleto || !dados.valor) {
+      return res
+        .status(400)
+        .json({ error: "Nome completo e valor são campos obrigatórios" });
+    }
+
+    console.log("Iniciando processamento de transação PIX:", dados);
+
     // Chamar a função de preenchimento de formulário
     const resultado: TransactionResult = await criarTransacao4p(dados);
-    
-    if (!resultado.payloadPix || !resultado.transactionId || !resultado.transactionRid) {
-      return res.status(500).json({ error: 'Não foi possível completar a transação' });
+
+    if (
+      !resultado.payloadPix ||
+      !resultado.transactionId ||
+      !resultado.transactionRid
+    ) {
+      return res
+        .status(500)
+        .json({ error: "Não foi possível completar a transação" });
     }
-    
+
+    // Gerar hash único para a transação
+    const hash = generateUniqueHash();
+
     // Salvar os dados da transação no banco de dados
     const dadosCompletos = {
       ...dados,
-      ...resultado
+      ...resultado,
+      hash,
+      status: 'pendente'
     };
-    
-    const transactionId = await saveTransaction(dadosCompletos);
-    
+
+    const transactionId = await saveTransaction({
+      transactionId: dadosCompletos.transactionId,
+      transactionRid: dadosCompletos.transactionRid,
+      payloadPix: dadosCompletos.payloadPix,
+      status: dadosCompletos.status,
+      explorerUrl: '',
+      hash: hash,
+      email: dadosCompletos.email,
+      telefone: dadosCompletos.telefone,
+      cpf: dadosCompletos.cpf || '',
+      cnpj: dadosCompletos.cnpj || '',
+      tipo_pessoa: dadosCompletos.tipoPessoa,
+      nomeCompleto: dadosCompletos.nomeCompleto,
+      valor: dadosCompletos.valor,
+      address: dadosCompletos.address
+    });
+
     // Retornar os dados da transação
     return res.status(201).json({
       id: transactionId,
-      ...resultado
+      hash: hash,
+      ...resultado,
     });
   } catch (error) {
-    console.error('Erro ao processar solicitação PIX:', error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro ao processar solicitação PIX:", error);
+    return res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Rota para buscar uma transação pelo ID
-app.get('/pagamento/:id', async (req, res) => {
+app.get("/pagamento/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    
+
     if (isNaN(id)) {
-      return res.status(400).json({ error: 'ID inválido' });
+      return res.status(400).json({ error: "ID inválido" });
     }
-    
+
     const transaction = await getTransactionById(id);
-    
+
     if (!transaction) {
-      return res.status(404).json({ error: 'Transação não encontrada' });
+      return res.status(404).json({ error: "Transação não encontrada" });
     }
-    
+
     return res.json(transaction);
   } catch (error) {
-    console.error('Erro ao buscar transação:', error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro ao buscar transação:", error);
+    return res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Iniciar o servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-}); 
+});
