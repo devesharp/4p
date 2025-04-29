@@ -108,10 +108,18 @@ export async function saveTransaction(data: any) {
   }
 }
 
+export async function updateStatus(transactionId: string, status: string) {
+  const sql = `
+    UPDATE transactions 
+    SET status = ? 
+    WHERE transaction_id = ?
+  `;
+}
+
 // Função para buscar uma transação pelo ID
-export async function getTransactionById(id: number) {
+export async function getTransactionById(id: string) {
   try {
-    const [rows] = await pool.execute('SELECT * FROM transactions WHERE id = ?', [id]);
+    const [rows] = await pool.execute('SELECT * FROM transactions WHERE transaction_id = ?', [id]);
     // @ts-ignore
     return rows[0];
   } catch (error) {

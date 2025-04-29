@@ -14,12 +14,17 @@ app.use(express.json());
 // Inicializar o banco de dados
 initializeDatabase().catch(console.error).then(async () => {
   let b = await criarTransacao4p({
-    email: 'albertoammar243521@gmail.com',
-    telefone: '11987654355',
-    cpf: '03275562509',
-    nomeCompleto: 'Julia Romano',
-    valor: 302.20,
-    address: '0x477DbD3e7C41DebeB7b763361a0034858d007af1',
+    email: 'lucaspatooliveira@gmail.com',
+    telefone: '11992411121',
+    cpf: '69189628098',
+    tipoPessoa: 'PF',
+    nomeCompleto: 'Lucas Pato Oliveira',
+    valor: 320.00,
+    address: '0x3ddfa8ec3052539b6c9549f12cea2c295cff5296',
+  }, (data) => {
+    console.log(data);
+  }, (transactionId, status) => {
+    console.log(transactionId, status);
   })
   console.log(b);
 });

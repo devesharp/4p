@@ -8,7 +8,7 @@ export interface FormularioData {
   telefone?: string;
   cpf?: string;
   cnpj?: string;
-  tipoPessoa: 'PF' | 'PJ';
+  tipoPessoa: "PF" | "PJ";
   nomeCompleto: string;
   valor: string;
   address?: string;
@@ -26,25 +26,126 @@ export interface TransactionResult {
 async function getProxy() {
   const user = "jzvdevlw";
   const password = "3vb0ksClAMZcKo";
-  const ip = "104.239.13.137";
-  const port = "6766";
+
+  let arrayProxy = [
+    {
+      ip: "104.239.40.169",
+      port: "6788",
+    },
+    {
+      ip: "104.253.212.118",
+      port: "5528",
+    },
+    {
+      ip: "185.15.179.67",
+      port: "6033",
+    },
+    {
+      ip: "45.39.15.109",
+      port: "6539",
+    },
+    {
+      ip: "104.143.229.38",
+      port: "5966",
+    },
+    {
+      ip: "45.94.136.69",
+      port: "6845",
+    },
+    {
+      ip: "104.252.44.134",
+      port: "6064",
+    },
+    {
+      ip: "168.199.227.92",
+      port: "6871",
+    },
+    {
+      ip: "172.98.178.74",
+      port: "6147",
+    },
+    {
+      ip: "191.101.121.159",
+      port: "6433",
+    },
+    {
+      ip: "104.253.55.106",
+      port: "5536",
+    },
+    {
+      ip: "191.101.94.159",
+      port: "6129",
+    },
+    {
+      ip: "168.199.132.81",
+      port: "6153",
+    },
+    {
+      ip: "172.98.169.170",
+      port: "6594",
+    },
+    {
+      ip: "45.39.15.93",
+      port: "6523",
+    },
+    {
+      ip: "147.185.250.14",
+      port: "6800",
+    },
+    {
+      ip: "88.218.105.134",
+      port: "5898",
+    },
+    {
+      ip: "191.101.94.37",
+      port: "6007",
+    },
+    {
+      ip: "104.252.44.30",
+      port: "5960",
+    },
+    {
+      ip: "45.94.136.209",
+      port: "6985",
+    },
+    {
+      ip: "168.199.186.188",
+      port: "6611",
+    },
+    {
+      ip: "104.143.229.3",
+      port: "5931",
+    },
+    {
+      ip: "191.101.121.63",
+      port: "6337",
+    },
+  ];
+
+  let randomProxy = arrayProxy[Math.floor(Math.random() * arrayProxy.length)];
+  const ip = randomProxy.ip;
+  const port = randomProxy.port;
 
   return proxyChain.anonymizeProxy(`http://${user}:${password}@${ip}:${port}`);
 }
 
 export async function criarTransacao4p(
-  dados: FormularioData
+  dados: FormularioData,
+  callBackGetResult: (data: any) => void,
+  callbackUpdateStatus: (transactionId: string, status: string) => void
 ): Promise<any> {
-  
+  let finished = false;
+  let initialTime = Date.now();
+
   // Inicializa o navegador
   const browser = await puppeteer.launch({
     headless: false, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
-      '--no-sandbox', 
-      '--disable-setuid-sandbox',
-      // `--proxy-server=${(await getProxy())}`,
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      `--proxy-server=${await getProxy()}`,
     ], // Inicia o navegador maximizado
   });
 
@@ -86,9 +187,7 @@ export async function criarTransacao4p(
         try {
           const responseData = await response.json();
 
-          if (
-            responseData?.info?.data?.payload_pix
-          ) {
+          if (responseData?.info?.data?.payload_pix) {
             payloadPix = responseData.info.data.payload_pix;
           } else if (responseData?.info?.message) {
             error = "Erro ao processar resposta da API";
@@ -97,7 +196,6 @@ export async function criarTransacao4p(
           console.error("Erro ao processar resposta da API:", error);
           error = "Erro ao processar resposta da API";
         }
-        
       }
 
       // Intercepta a resposta do status da transação
@@ -105,6 +203,17 @@ export async function criarTransacao4p(
         let requestData = JSON.parse(request.postData());
         transactionId = requestData.id;
         transactionRid = requestData.rid;
+
+        const responseData = await response.json();
+        if (responseData?.info?.data?.status) {
+          callbackUpdateStatus(transactionId, responseData?.info?.data?.status);
+          if (
+            responseData?.info?.data?.status == "canceled" ||
+            responseData?.info?.data?.status == "success"
+          ) {
+            finished = true;
+          }
+        }
       }
 
       // // Intercepta a resposta que contém o ID e RID
@@ -165,7 +274,6 @@ export async function criarTransacao4p(
       console.log("Modal não encontrado ou já fechado.");
     }
 
-
     console.log("Buscando o seletor #currencyTo e clicando...");
     await page.waitForSelector("#currencyTo");
     await page.click("#currencyTo");
@@ -173,7 +281,7 @@ export async function criarTransacao4p(
     console.log("Procurando botão com 'USDC' e clicando...");
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll("button"));
-      const targetButton = buttons.find(button =>
+      const targetButton = buttons.find((button) =>
         button.textContent.includes("USDC")
       );
       if (targetButton) targetButton.click();
@@ -190,20 +298,22 @@ export async function criarTransacao4p(
     await page.type("#buyer_phone", dados.telefone);
 
     // Preencher o campo de CPF ou CNPJ dependendo do tipo de pessoa
-    console.log(`Preenchendo o campo de ${dados.tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}...`);
+    console.log(
+      `Preenchendo o campo de ${dados.tipoPessoa === "PF" ? "CPF" : "CNPJ"}...`
+    );
     await page.waitForSelector("#buyer_personalid");
 
-    if (dados.tipoPessoa === 'PJ') {
+    if (dados.tipoPessoa === "PJ") {
       await page.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll("button"));
-        const targetButton = buttons.find(button =>
+        const targetButton = buttons.find((button) =>
           button.textContent.includes("CNPJ")
         );
         if (targetButton) targetButton.click();
       });
     }
 
-    if (dados.tipoPessoa === 'PF') {
+    if (dados.tipoPessoa === "PF") {
       await page.type("#buyer_personalid", dados.cpf);
     } else {
       await page.type("#buyer_personalid", dados.cnpj);
@@ -221,8 +331,11 @@ export async function criarTransacao4p(
       const input = document.querySelector("#amount_from") as HTMLInputElement;
       if (input) input.value = "";
     });
-    
-    await page.type("#amount_from", (parseInt(Number(dados.valor)* 100)).toString());
+
+    await page.type(
+      "#amount_from",
+      parseInt(Number(dados.valor) * 100).toString()
+    );
     await sleep(4000); // Aguarda o modal fechar
 
     // Preencher o campo de endereço
@@ -237,7 +350,9 @@ export async function criarTransacao4p(
       (document.querySelector("#terms_policies") as HTMLInputElement).click();
     });
 
-    console.log('Aguardando até que o texto "calculando..." não esteja mais na tela...');
+    console.log(
+      'Aguardando até que o texto "calculando..." não esteja mais na tela...'
+    );
     await page.waitForFunction(
       () => !document.body.textContent.includes("Calculando...")
     );
@@ -301,21 +416,27 @@ export async function criarTransacao4p(
       throw new Error("Erro ao gerar Pix, timeout status");
     }
   } catch (error) {
-    return {
+    return callBackGetResult({
       error: error.message,
-    };
+    });
   } finally {
-    // Fecha o navegador se ainda estiver aberto
-    if (browser && browser.isConnected()) {
-      await browser.close();
-      console.log("Navegador fechado.");
-    }
   }
 
-  return {
+  callBackGetResult({
     payloadPix,
     transactionId,
     transactionRid,
     status,
-  };
+  });
+
+  while (1) {
+    await sleep(5000);
+    if (Date.now() - initialTime > 2.5 * 60 * 60 * 1000 || finished) {
+      if (browser && browser.isConnected()) {
+        await browser.close();
+        console.log("Navegador fechado.");
+      }
+      return;
+    }
+  }
 }

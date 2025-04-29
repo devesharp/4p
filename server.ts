@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import {
   criarTransacao4p,
   FormularioData,
@@ -10,7 +11,8 @@ import {
   saveTransaction,
   getTransactionById,
   getConfig,
-  generateUniqueHash
+  generateUniqueHash,
+  updateStatus
 } from "./database";
 
 dotenv.config();
@@ -20,7 +22,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware para processar JSON
 app.use(express.json());
-
+app.use(cors());
 // Inicializar o banco de dados
 initializeDatabase().catch(console.error);
 
@@ -78,8 +80,24 @@ app.post("/pix", async (req, res) => {
 
     console.log("Iniciando processamento de transação PIX:", dados);
 
+    return res.status(201).json({
+      "id": 9,
+      "hash": "2849651775031126429",
+      "payloadPix": "00020101021226900014br.gov.bcb.pix2568qr.cornerpix.com.br/11581339/v2/3653d8e1-a125-436e-86e0-c2f5b7f8bf8f5204000053039865802BR5914BMP MONEY PLUS6009SAO PAULO62070503***63042A35",
+      "transactionId": "5a628e687ed08591b18c92a117021354",
+      "transactionRid": "03AFcWeA4ApiISda2SgXnW4tWJsJuOWucDVklEkzJZPS-rF_T58oqfdRJcWsZbELLes7ckkFzWoq_n59yNB83rpRm-KBqCiOboMCeUAQTpnRwy8QdTJf_EEI2Ec1MfN9J8JVKNZhlVhRHxM3ziEG8hp7JOFLEk-pxQWsocgLZrOYcqtWOen1gu4e0aBUxqK27Ayo7IWwz01_wI_ju5GsYKJcSEU4p5O5tdjLoCLBi5i3-tUKtpTBVpKk9-Cn7hYNZ1hPnjbfnTVqRIFvEM-QRAGOIr6L_bQkRjlJtz9GD5JxIUz-L9WbKcVcwuR-7Pm1PSeuBsvw-TGJ22cxzm9NoEnC9CsxDGRt-T2SDNnZsaETQTr5q3MekNtGIJ_yLNcRwrAS8LTLjWmitiy6OK-6I1yBayfelvIuJ3uQTEuyFXtVDHMUXzVHhvZ7xpbSG2jH3YKv0MunA2UUD2rjHohQ12mVTIKFSWaS0GtA0mlLKJ2C0d2zpXD90PpG8Nu17mUaJM98_pbxif2aSjwT1T4GSf5JZP_2f5Gi7FcL-akD_DK44FKFdvz90xv86LgM8jTqOr7pwZja3Jn7QiqCfboZNINlGQKRlDbO0P9NcIefHkgPTjkNCJCLBskE8pUvtsdvJ7l0EaP_wzCR069q0b16MXDAE3ClgcXmysmnMuGMAN-hLm8G8oWXfO6G5Zh4RukS-PbesKSxdKyf9dAT1EiBJ3YoYpIK86GAr-4th4MdCMRs7GDzZEUIla-zKmZWHJJ7ISYoi6Kn_MLAbATw4E8NIaRmTx9ijGKlm4Uumsyj_TVvfD5sLrgZz9QYPj409U-Zj4eJugbADJ6NYuC5SYEnZP69GqHzEsFDGeKtcBlbFuCtJ5fQwc79V8hq-juJRZt-mTSeUFYNbZTogMYumzKYkmlrQ1Scoj4SG0sHnCPjg9AXZbETMqomjI67k",
+      "status": ""
+    });
+    
     // Chamar a função de preenchimento de formulário
-    const resultado: TransactionResult = await criarTransacao4p(dados);
+    const resultado: TransactionResult = await new Promise(async (resolve, reject) => {
+      criarTransacao4p(dados, (data) => {
+        resolve(data);
+      }, (transactionId, status) => {
+        console.log("Atualizando status da transação:", transactionId, status);
+        updateStatus(transactionId, status);
+      });
+    });
 
     if (
       !resultado.payloadPix ||
@@ -99,9 +117,26 @@ app.post("/pix", async (req, res) => {
       ...dados,
       ...resultado,
       hash,
-      status: 'pendente'
+      status: 'pending'
     };
 
+    console.log({
+      transactionId: dadosCompletos.transactionId,
+      transactionRid: dadosCompletos.transactionRid,
+      payloadPix: dadosCompletos.payloadPix,
+      status: dadosCompletos.status,
+      explorerUrl: '',
+      hash: hash,
+      email: dadosCompletos.email,
+      telefone: dadosCompletos.telefone,
+      cpf: dadosCompletos.cpf || '',
+      cnpj: dadosCompletos.cnpj || '',
+      tipo_pessoa: dadosCompletos.tipoPessoa,
+      nomeCompleto: dadosCompletos.nomeCompleto,
+      valor: dadosCompletos.valor,
+      address: dadosCompletos.address
+    });
+    
     const transactionId = await saveTransaction({
       transactionId: dadosCompletos.transactionId,
       transactionRid: dadosCompletos.transactionRid,
@@ -134,11 +169,7 @@ app.post("/pix", async (req, res) => {
 // Rota para buscar uma transação pelo ID
 app.get("/pagamento/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({ error: "ID inválido" });
-    }
+    const id = req.params.id;
 
     const transaction = await getTransactionById(id);
 
