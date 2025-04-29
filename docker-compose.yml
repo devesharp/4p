@@ -6,7 +6,7 @@ services:
     container_name: p4-payments-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: "8fG#2kL2!qR@9zXw"
       MYSQL_DATABASE: p4_payments
     ports:
       - "3309:3306"
@@ -20,7 +20,7 @@ services:
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: "8fG#2kL2!qR@9zXw"
     ports:
       - "9090:80"
     depends_on:
