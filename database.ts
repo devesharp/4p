@@ -8,7 +8,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'mysql',
   user: process.env.DB_USER || 'root',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
-  password: process.env.DB_PASSWORD || 'password',
+  password: process.env.DB_PASSWORD || '8fG#2kL2!qR@9zXw',
   database: process.env.DB_NAME || 'p4_payments',
   waitForConnections: true,
   connectionLimit: 10,
