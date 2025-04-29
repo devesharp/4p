@@ -104,4 +104,34 @@ Obter os detalhes de uma transação pelo ID.
 
 ## Licença
 
-ISC 
+ISC
+
+## Configuração do PM2
+
+Este projeto utiliza PM2 para gerenciamento de processos em ambiente de produção.
+
+### Comandos disponíveis
+
+- `npm run pm2:start` - Inicia a aplicação com PM2
+- `npm run pm2:stop` - Para a aplicação
+- `npm run pm2:restart` - Reinicia a aplicação
+- `npm run pm2:status` - Verifica o status da aplicação
+
+### Configuração de inicialização automática
+
+Para configurar o PM2 para iniciar automaticamente quando o sistema reiniciar:
+
+1. Execute o comando `npx pm2 startup`
+2. Copie e execute o comando sugerido pelo PM2
+3. Execute `npx pm2 save` para salvar a configuração atual
+
+### Configuração do PM2
+
+A configuração do PM2 está no arquivo `ecosystem.config.js`. Este arquivo define:
+
+- Nome da aplicação: `p4-payments`
+- Comando de execução: `yarn dev`
+- Reinício automático em caso de falha
+- Reinício com delay de 3 segundos após uma falha
+- Limite de memória: 1GB (reinicia automaticamente se exceder)
+- Configurações para ambientes de desenvolvimento e produção 
