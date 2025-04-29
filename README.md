@@ -130,8 +130,29 @@ Para configurar o PM2 para iniciar automaticamente quando o sistema reiniciar:
 A configuração do PM2 está no arquivo `ecosystem.config.js`. Este arquivo define:
 
 - Nome da aplicação: `p4-payments`
-- Comando de execução: `yarn dev`
+- Comando de execução: Usa o npx para executar ts-node com server.ts
 - Reinício automático em caso de falha
 - Reinício com delay de 3 segundos após uma falha
 - Limite de memória: 1GB (reinicia automaticamente se exceder)
-- Configurações para ambientes de desenvolvimento e produção 
+- Configurações para ambientes de desenvolvimento e produção
+
+### Solução de problemas
+
+Se você encontrar erros como `exec "/usr/bin/node" "/usr/bin/yarn" "$@"`, significa que o PM2 não está encontrando os executáveis corretos (Node.js ou Yarn). Para resolver:
+
+1. Execute `which node` e `which npx` para obter os caminhos corretos
+2. Atualize o arquivo `ecosystem.config.js` com esses caminhos
+3. Use o caminho absoluto para os executáveis no campo `script`
+4. Reinicie o PM2 com `npm run pm2:restart`
+
+Exemplo de configuração para NVM:
+```js
+module.exports = {
+  apps: [{
+    name: 'p4-payments',
+    script: '/caminho/para/seu/npx',
+    args: 'ts-node -T server.ts',
+    // ... outras configurações
+  }]
+};
+``` 

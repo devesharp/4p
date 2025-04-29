@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: 'p4-payments',
-    script: 'yarn',
-    args: 'dev',
+    script: './node_modules/.bin/ts-node',
+    args: '-T server.ts',
     watch: false,
     max_memory_restart: '1G',
     autorestart: true,
