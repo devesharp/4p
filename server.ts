@@ -10,7 +10,8 @@ import {
   initializeDatabase,
   saveTransaction,
   getTransactionById,
-  getConfig,
+  getContact,
+  getContactExist,
   generateUniqueHash,
   updateStatus
 } from "./database";
@@ -36,31 +37,15 @@ app.post("/pix", async (req, res) => {
   try {
     const dadosRequest = req.body;
 
-    // Obter configurações do sistema
-    const config = await getConfig();
-    if (!config) {
-      return res
-        .status(500)
-        .json({ error: "Configurações do sistema não encontradas" });
-    }
-
-    // Preparar dados do formulário usando os dados da configuração
-    const dados: FormularioData = {
-      ...dadosRequest,
-      email: config.email,
-      telefone: config.phone,
-      address: config.wallet_address
-    };
-
     // Validação específica baseada no tipo de pessoa
-    if (dados.tipoPessoa === 'PF') {
-      if (!dados.cpf) {
+    if (dadosRequest.tipoPessoa === 'PF') {
+      if (!dadosRequest.cpf) {
         return res
           .status(400)
           .json({ error: "CPF é obrigatório para Pessoa Física" });
       }
-    } else if (dados.tipoPessoa === 'PJ') {
-      if (!dados.cnpj) {
+    } else if (dadosRequest.tipoPessoa === 'PJ') {
+      if (!dadosRequest.cnpj) {
         return res
           .status(400)
           .json({ error: "CNPJ é obrigatório para Pessoa Jurídica" });
@@ -71,6 +56,32 @@ app.post("/pix", async (req, res) => {
         .json({ error: "Tipo de pessoa deve ser 'PF' ou 'PJ'" });
     }
 
+    // Verificar se já existe um contato associado a esse cpf/cnpj
+    let contact;
+    if (dadosRequest.tipoPessoa === 'PF' && dadosRequest.cpf) {
+      contact = await getContactExist(dadosRequest.cpf, "");
+    } else if (dadosRequest.tipoPessoa === 'PJ' && dadosRequest.cnpj) {
+      contact = await getContactExist("", dadosRequest.cnpj);
+    }
+
+    // Se não encontrou contato existente, buscar um novo contato não utilizado
+    if (!contact) {
+      contact = await getContact();
+      if (!contact) {
+        return res
+          .status(500)
+          .json({ error: "Não há contatos disponíveis no sistema" });
+      }
+    }
+
+    // Preparar dados do formulário usando os dados do contato
+    const dados: FormularioData = {
+      ...dadosRequest,
+      email: contact.email,
+      telefone: contact.phone,
+      address: contact.wallet_address
+    };
+
     // Validação dos outros campos obrigatórios
     if (!dados.nomeCompleto || !dados.valor) {
       return res
@@ -80,22 +91,13 @@ app.post("/pix", async (req, res) => {
 
     console.log("Iniciando processamento de transação PIX:", dados);
 
-    // return res.status(201).json({
-    //   "id": 9,
-    //   "hash": "2849651775031126429",
-    //   "payloadPix": "00020101021226900014br.gov.bcb.pix2568qr.cornerpix.com.br/11581339/v2/3653d8e1-a125-436e-86e0-c2f5b7f8bf8f5204000053039865802BR5914BMP MONEY PLUS6009SAO PAULO62070503***63042A35",
-    //   "transactionId": "5a628e687ed08591b18c92a117021354",
-    //   "transactionRid": "03AFcWeA4ApiISda2SgXnW4tWJsJuOWucDVklEkzJZPS-rF_T58oqfdRJcWsZbELLes7ckkFzWoq_n59yNB83rpRm-KBqCiOboMCeUAQTpnRwy8QdTJf_EEI2Ec1MfN9J8JVKNZhlVhRHxM3ziEG8hp7JOFLEk-pxQWsocgLZrOYcqtWOen1gu4e0aBUxqK27Ayo7IWwz01_wI_ju5GsYKJcSEU4p5O5tdjLoCLBi5i3-tUKtpTBVpKk9-Cn7hYNZ1hPnjbfnTVqRIFvEM-QRAGOIr6L_bQkRjlJtz9GD5JxIUz-L9WbKcVcwuR-7Pm1PSeuBsvw-TGJ22cxzm9NoEnC9CsxDGRt-T2SDNnZsaETQTr5q3MekNtGIJ_yLNcRwrAS8LTLjWmitiy6OK-6I1yBayfelvIuJ3uQTEuyFXtVDHMUXzVHhvZ7xpbSG2jH3YKv0MunA2UUD2rjHohQ12mVTIKFSWaS0GtA0mlLKJ2C0d2zpXD90PpG8Nu17mUaJM98_pbxif2aSjwT1T4GSf5JZP_2f5Gi7FcL-akD_DK44FKFdvz90xv86LgM8jTqOr7pwZja3Jn7QiqCfboZNINlGQKRlDbO0P9NcIefHkgPTjkNCJCLBskE8pUvtsdvJ7l0EaP_wzCR069q0b16MXDAE3ClgcXmysmnMuGMAN-hLm8G8oWXfO6G5Zh4RukS-PbesKSxdKyf9dAT1EiBJ3YoYpIK86GAr-4th4MdCMRs7GDzZEUIla-zKmZWHJJ7ISYoi6Kn_MLAbATw4E8NIaRmTx9ijGKlm4Uumsyj_TVvfD5sLrgZz9QYPj409U-Zj4eJugbADJ6NYuC5SYEnZP69GqHzEsFDGeKtcBlbFuCtJ5fQwc79V8hq-juJRZt-mTSeUFYNbZTogMYumzKYkmlrQ1Scoj4SG0sHnCPjg9AXZbETMqomjI67k",
-    //   "status": ""
-    // });
-    
     // Chamar a função de preenchimento de formulário
     const resultado: TransactionResult = await new Promise(async (resolve, reject) => {
       criarTransacao4p(dados, (data) => {
         resolve(data);
       }, (transactionId, status) => {
-        console.log("Atualizando status da transação:", transactionId, status);
-        updateStatus(transactionId, status);
+        console.log("Atualizando status da transação:", transactionId, status, JSON.stringify(dados));
+        updateStatus(transactionId, status, JSON.stringify(dados));
       });
     });
 

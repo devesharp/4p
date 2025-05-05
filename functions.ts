@@ -132,10 +132,28 @@ async function getProxy() {
 export async function criarTransacao4p(
   dados: FormularioData,
   callBackGetResult: (data: any) => void,
-  callbackUpdateStatus: (transactionId: string, status: string) => void
+  callbackUpdateStatus: (transactionId: string, status: string, data: any) => void
 ): Promise<any> {
   let finished = false;
   let initialTime = Date.now();
+
+  // // TESTE
+  // callBackGetResult({
+  //   payloadPix: "teste",
+  //   transactionId: "teste",
+  //   transactionRid: "teste",
+  //   status: "teste",
+  // });
+
+  // await sleep(4000);
+  // callbackUpdateStatus("teste", "teste", {
+  //   payloadPix: "teste",
+  //   transactionId: "teste",
+  //   transactionRid: "teste",
+  //   status: "teste",
+  // });
+
+  // return;
 
   // Inicializa o navegador
   const browser = await puppeteer.launch({

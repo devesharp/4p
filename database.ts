@@ -39,6 +39,7 @@ export async function initializeDatabase() {
         nome_completo VARCHAR(255),
         valor VARCHAR(50),
         address VARCHAR(255),
+        data LONGTEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -46,18 +47,19 @@ export async function initializeDatabase() {
     
     // Criar a tabela de configurações se não existir
     await pool.execute(`
-      CREATE TABLE IF NOT EXISTS config (
+      CREATE TABLE IF NOT EXISTS contacts (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
         wallet_address VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
         phone VARCHAR(255) NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
     
     // Verificar se já existem registros na tabela config
-    const [configRows] = await pool.execute('SELECT COUNT(*) as count FROM config');
+    const [contactsRows] = await pool.execute('SELECT COUNT(*) as contacts FROM contacts');
     
     console.log('Banco de dados inicializado com sucesso!');
   } catch (error) {
@@ -94,6 +96,7 @@ export async function saveTransaction(data: any) {
         data.valor,
         data.address
       ];
+      console.log(params);
       // Executa a query parametrizada
       const [result] = await conn.execute(sql, params);
       // @ts-ignore
@@ -108,12 +111,20 @@ export async function saveTransaction(data: any) {
   }
 }
 
-export async function updateStatus(transactionId: string, status: string) {
+export async function updateStatus(transactionId: string, status: string, data: string = "") {
   const sql = `
     UPDATE transactions 
-    SET status = ? 
+    SET status = ?, data = ?
     WHERE transaction_id = ?
   `;
+  try {
+    const [result] = await pool.execute(sql, [status, data, transactionId]);
+    // @ts-ignore
+    return result.affectedRows;
+  } catch (error) {
+    console.error('Erro ao atualizar status da transação:', error);
+    throw error;
+  }
 }
 
 // Função para buscar uma transação pelo ID
@@ -128,14 +139,49 @@ export async function getTransactionById(id: string) {
   }
 }
 
-// Função para buscar a configuração do sistema
-export async function getConfig() {
+// Função para buscar um contato não utilizado
+export async function getContact() {
   try {
-    const [rows] = await pool.execute('SELECT * FROM config ORDER BY id LIMIT 1');
+    const [rows] = await pool.execute('SELECT * FROM contacts WHERE used = FALSE ORDER BY id LIMIT 1');
+    
+    // Se encontrou um contato, marcar como usado
+    if (rows && rows[0]) {
+      const contact = rows[0];
+      // await pool.execute('UPDATE contacts SET used = TRUE WHERE id = ?', [contact.id]);
+      return contact;
+    }
+    
     // @ts-ignore
-    return rows[0];
+    return null;
   } catch (error) {
-    console.error('Erro ao buscar configuração:', error);
+    console.error('Erro ao buscar contato disponível:', error);
+    throw error;
+  }
+}
+
+// Função para buscar contato existente por CPF ou CNPJ
+export async function getContactExist(cpf: string = "", cnpj: string = "") {
+  try {
+    let query = 'SELECT email, telefone as phone, address as wallet_address FROM transactions WHERE ';
+    let params = [];
+    
+    if (cpf && cpf.trim() !== '') {
+      query += 'cpf = ?';
+      params.push(cpf);
+    } else if (cnpj && cnpj.trim() !== '') {
+      query += 'cnpj = ?';
+      params.push(cnpj);
+    } else {
+      return null;
+    }
+    
+    query += ' ORDER BY id DESC LIMIT 1';
+    
+    const [rows] = await pool.execute(query, params);
+    // @ts-ignore
+    return rows && rows[0] ? rows[0] : null;
+  } catch (error) {
+    console.error('Erro ao buscar contato existente:', error);
     throw error;
   }
 }
