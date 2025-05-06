@@ -26,7 +26,7 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS transactions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         transaction_id VARCHAR(255),
-        transaction_rid VARCHAR(255),
+        transaction_rid LONGTEXT,
         payload_pix TEXT,
         status VARCHAR(50),
         explorer_url TEXT,
