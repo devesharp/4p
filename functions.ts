@@ -420,6 +420,7 @@ export async function criarTransacao4p(
       throw new Error("Erro ao gerar Pix, timeout status");
     }
   } catch (error) {
+    console.log('Erro ao gerar Pix:', error);
     return callBackGetResult({
       error: error.message,
     });
