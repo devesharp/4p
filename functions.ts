@@ -307,8 +307,6 @@ export async function criarTransacao4p(
 
     await sleep(1000);
 
-    return;
-
     console.log(
       'Aguardando até que o texto "calculando..." não esteja mais na tela...'
     );
