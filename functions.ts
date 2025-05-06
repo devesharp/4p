@@ -163,7 +163,7 @@ export async function criarTransacao4p(
       "--start-maximized",
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      // `--proxy-server=${await getProxy()}`,
+      `--proxy-server=${await getProxy()}`,
     ], // Inicia o navegador maximizado
   });
 
@@ -262,13 +262,11 @@ export async function criarTransacao4p(
       waitUntil: "networkidle2",
     });
 
-
-
     // Aguarda um momento para a página carregar completamente
     await sleep(2000);
     
     // Busca e clica no botão que contém "Arbitrum"
-    console.log("Buscando botão com 'Arbitrum' e clicando...");
+    console.log('Abrindo a tela de seleção de criptomoeda...');
     await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll("button"));
       const botaoArbitrum = botoes.find((botao) => 
@@ -285,6 +283,7 @@ export async function criarTransacao4p(
     // Aguarda um momento após clicar no botão
     await sleep(1000);
 
+    console.log('Selecionando a criptomoeda USDC...');
     await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll("button"));
       const botaoArbitrum = botoes.find((botao) => 
@@ -298,6 +297,7 @@ export async function criarTransacao4p(
       }
     });
 
+    console.log('Preenchendo o valor da transação...');
     await page.waitForSelector("#amountFrom");
     await page.evaluate( () => document.getElementById("amountFrom").value = "")
     await page.type(
@@ -315,6 +315,7 @@ export async function criarTransacao4p(
     );
     await sleep(1000);
 
+    console.log('Clicando no botão "Prosseguir"...');
     await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll("button"));
       const botaoArbitrum = botoes.find((botao) => 
@@ -331,16 +332,27 @@ export async function criarTransacao4p(
 
     await sleep(1000);
 
+    console.log('Preenchendo os dados do comprador...');
     await page.type('input[placeholder*="nome"]', dados.nomeCompleto);
     await sleep(1000);
+
+    console.log('Preenchendo o e-mail do comprador...');
     await page.type('input[placeholder*="e-mail"]', dados.email);
     await sleep(1000);
+
+    console.log('Preenchendo o CPF do comprador...');
     await page.type('input[placeholder*="CPF"]', dados.cpf);
     await sleep(1000);
+
+    console.log('Preenchendo a carteira do comprador...');
     await page.type('input[placeholder*="carteira"]', dados.address);
+    await sleep(1000);
+
+    console.log('Clicando no botão "Confirmar dados"...');
     await page.click('#terms_policies');
     await sleep(1000);
 
+    console.log('Clicando no botão "Confirmar dados"...');
     await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll("button"));
       const botaoArbitrum = botoes.find((botao) => 
@@ -356,6 +368,7 @@ export async function criarTransacao4p(
 
     await sleep(1000);
 
+    console.log('Clicando no botão "Solicitar conversão"...');
     await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll("button"));
       const botaoArbitrum = botoes.find((botao) => 
@@ -412,6 +425,12 @@ export async function criarTransacao4p(
     });
   } finally {
   }
+
+  console.log('Retornando os dados da transação...');
+  console.log('Payload PIX:', payloadPix);
+  console.log('ID da transação:', transactionId);
+  console.log('RID da transação:', transactionRid);
+  console.log('Status da transação:', status);
 
   callBackGetResult({
     payloadPix,
