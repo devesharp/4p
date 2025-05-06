@@ -262,40 +262,110 @@ export async function criarTransacao4p(
       waitUntil: "networkidle2",
     });
 
+    // await sleep(2000000);s
+    // Aguarda 10 segundos para verificar se o modal aparece
+    console.log("Aguardando possível modal...");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-
-    // Aguarda um momento para a página carregar completamente
-    await sleep(2000);
-    
-    // Busca e clica no botão que contém "Arbitrum"
-    console.log("Buscando botão com 'Arbitrum' e clicando...");
-    await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll("button"));
-      const botaoArbitrum = botoes.find((botao) => 
-        botao.textContent.includes("ETH")
+    // Verifica se o modal está presente e clica no botão "Estou ciente. Continuar"
+    const modalSelector = 'button:contains("Estou ciente. Continuar")';
+    const modalExists = await page.evaluate((selector) => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.some((button) =>
+        button.textContent.includes("Estou ciente")
       );
-      if (botaoArbitrum) {
-        console.log("Botão Arbitrum encontrado, clicando...");
-        botaoArbitrum.click();
-      } else {
-        console.log("Botão Arbitrum não encontrado");
-      }
+    }, modalSelector);
+
+    if (modalExists) {
+      console.log(
+        'Modal encontrado. Clicando no botão "Estou ciente. Continuar"...'
+      );
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const targetButton = buttons.find((button) =>
+          button.textContent.includes("Estou ciente. Continuar")
+        );
+        if (targetButton) targetButton.click();
+      });
+      await sleep(2000); // Aguarda o modal fechar
+    } else {
+      console.log("Modal não encontrado ou já fechado.");
+    }
+
+    console.log("Buscando o seletor #currencyTo e clicando...");
+    await page.waitForSelector("#currencyTo");
+    await page.click("#currencyTo");
+    await sleep(1000); // Aguarda 1 segundo
+    console.log("Procurando botão com 'USDC' e clicando...");
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const targetButton = buttons.find((button) =>
+        button.textContent.includes("USDC")
+      );
+      if (targetButton) targetButton.click();
     });
-    
-    // Aguarda um momento após clicar no botão
-    await sleep(1000);
 
+    // Preencher o campo de e-mail
+    console.log("Preenchendo o campo de email...");
+    await page.waitForSelector("#buyer_email");
+    await page.type("#buyer_email", dados.email);
+
+    // Preencher o campo de telefone
+    console.log("Preenchendo o campo de telefone...");
+    await page.waitForSelector("#buyer_phone");
+    await page.type("#buyer_phone", dados.telefone);
+
+    // Preencher o campo de CPF ou CNPJ dependendo do tipo de pessoa
+    console.log(
+      `Preenchendo o campo de ${dados.tipoPessoa === "PF" ? "CPF" : "CNPJ"}...`
+    );
+    await page.waitForSelector("#buyer_personalid");
+
+    if (dados.tipoPessoa === "PJ") {
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const targetButton = buttons.find((button) =>
+          button.textContent.includes("CNPJ")
+        );
+        if (targetButton) targetButton.click();
+      });
+    }
+
+    if (dados.tipoPessoa === "PF") {
+      await page.type("#buyer_personalid", dados.cpf);
+    } else {
+      await page.type("#buyer_personalid", dados.cnpj);
+    }
+
+    // Preencher o campo de nome completo
+    console.log("Preenchendo o campo de nome completo...");
+    await page.waitForSelector("#buyer_name");
+    await page.type("#buyer_name", dados.nomeCompleto);
+
+    // Preencher o valor
+    console.log("Preenchendo o campo de valor...");
+    await page.waitForSelector("#amount_from");
     await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll("button"));
-      const botaoArbitrum = botoes.find((botao) => 
-        botao.textContent.includes("USDC")
-      );
-      if (botaoArbitrum) {
-        console.log("Botão Arbitrum encontrado, clicando...");
-        botaoArbitrum.click();
-      } else {
-        console.log("Botão Arbitrum não encontrado");
-      }
+      const input = document.querySelector("#amount_from") as HTMLInputElement;
+      if (input) input.value = "";
+    });
+
+    await page.type(
+      "#amount_from",
+      parseInt(Number(dados.valor) * 100).toString()
+    );
+    await sleep(4000); // Aguarda o modal fechar
+
+    // Preencher o campo de endereço
+    console.log("Preenchendo o campo de endereço...");
+    await page.waitForSelector("#receiver_wallet");
+    await page.type("#receiver_wallet", dados.address);
+
+    // Marcar o checkbox de termos e políticas
+    console.log("Marcando o checkbox de termos e políticas...");
+    await page.waitForSelector('input[name="terms_policies"]');
+    await page.evaluate(() => {
+      (document.querySelector("#terms_policies") as HTMLInputElement).click();
     });
 
     console.log(
@@ -304,62 +374,28 @@ export async function criarTransacao4p(
     await page.waitForFunction(
       () => !document.body.textContent.includes("Calculando...")
     );
-    await sleep(1000);
 
+    console.log('Clicando no botão "Continuar"...');
     await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll("button"));
-      const botaoArbitrum = botoes.find((botao) => 
-        botao.textContent.includes("Prosseguir")
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const submitButton = buttons.find((button) =>
+        button.textContent.includes("Solicitar")
       );
-      if (botaoArbitrum) {
-        console.log("Botão Arbitrum encontrado, clicando...");
-        botaoArbitrum.click();
-      } else {
-        console.log("Botão Arbitrum não encontrado");
-      }
+      if (submitButton) submitButton.click();
     });
 
-
-    await sleep(1000);
-
-    await page.type('input[placeholder*="nome"]', dados.nomeCompleto);
-    await sleep(1000);
-    await page.type('input[placeholder*="e-mail"]', dados.email);
-    await sleep(1000);
-    await page.type('input[placeholder*="CPF"]', dados.cpf);
-    await sleep(1000);
-    await page.type('input[placeholder*="carteira"]', dados.address);
-    await page.click('#terms_policies');
-    await sleep(1000);
-
+    await sleep(1000); // Aguarda o modal fechar
+    // Clicar no botão "Continuar"
+    console.log('Clicando no botão "Continuar"...');
+    await page.waitForSelector("button");
     await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll("button"));
-      const botaoArbitrum = botoes.find((botao) => 
-        botao.textContent.includes("Confirmar dados")
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const submitButton = buttons.find((button) =>
+        button.textContent.includes("Continuar")
       );
-      if (botaoArbitrum) {
-        console.log("Botão Arbitrum encontrado, clicando...");
-        botaoArbitrum.click();
-      } else {
-        console.log("Botão Arbitrum não encontrado");
-      }
+      if (submitButton) submitButton.click();
     });
 
-    await sleep(1000);
-
-    await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll("button"));
-      const botaoArbitrum = botoes.find((botao) => 
-        botao.textContent.includes("Solicitar conversão")
-      );
-      if (botaoArbitrum) {
-        console.log("Botão Arbitrum encontrado, clicando...");
-        botaoArbitrum.click();
-      } else {
-        console.log("Botão Arbitrum não encontrado");
-      }
-    });
-    
     // Aguardando a resposta da API e obtendo o payload PIX
     console.log("Aguardando resposta da API para obter o código PIX...");
 
