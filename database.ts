@@ -147,7 +147,7 @@ export async function getContact() {
     // Se encontrou um contato, marcar como usado
     if (rows && rows[0]) {
       const contact = rows[0];
-      // await pool.execute('UPDATE contacts SET used = TRUE WHERE id = ?', [contact.id]);
+      await pool.execute('UPDATE contacts SET used = TRUE WHERE id = ?', [contact.id]);
       return contact;
     }
     

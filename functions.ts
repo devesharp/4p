@@ -157,7 +157,7 @@ export async function criarTransacao4p(
 
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: true, // Definido como false para visualizar o navegador em ação
+    headless: false, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
@@ -340,9 +340,46 @@ export async function criarTransacao4p(
     await page.type('input[placeholder*="e-mail"]', dados.email);
     await sleep(1000);
 
+    if (dados.tipoPessoa === "PF") {
     console.log('Preenchendo o CPF do comprador...');
-    await page.type('input[placeholder*="CPF"]', dados.cpf);
-    await sleep(1000);
+      await page.type('input[placeholder*="CPF"]', dados.cpf);
+      await sleep(1000);
+    } else {
+      await page.evaluate(() => {
+        const botoes = Array.from(document.querySelectorAll("button"));
+        const botaoArbitrum = botoes.find((botao) => 
+          botao.textContent.includes("Usar CPF")
+        );
+  
+        if (botaoArbitrum) {
+          console.log("Botão Arbitrum encontrado, clicando...");
+          botaoArbitrum.click();
+        } else {
+          console.log("Botão Arbitrum não encontrado");
+        }
+      });
+  
+      await sleep(1000);
+      console.log('Clicando no botão "Usar CNPJ"...');
+      await page.evaluate(() => {
+        const botoes = Array.from(document.querySelectorAll("span"));
+        const botaoArbitrum = botoes.find((botao) => 
+          botao.textContent.includes("Usar CNPJ")
+        );
+        
+        if (botaoArbitrum) {
+          console.log("Botão Arbitrum encontrado, clicando...");
+          botaoArbitrum.click();
+        } else {
+          console.log("Botão Arbitrum não encontrado");
+        }
+      });
+      await sleep(1000);
+
+      console.log('Preenchendo o CNPJ do comprador...');
+      await page.type('input[placeholder*="CNPJ"]', dados.cnpj);
+      await sleep(1000);
+    }
 
     console.log('Preenchendo a carteira do comprador...');
     await page.type('input[placeholder*="carteira"]', dados.address);
