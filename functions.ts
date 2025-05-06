@@ -157,7 +157,7 @@ export async function criarTransacao4p(
 
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: false, // Definido como false para visualizar o navegador em ação
+    headless: true, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
@@ -298,6 +298,17 @@ export async function criarTransacao4p(
       }
     });
 
+    await page.waitForSelector("#amountFrom");
+    await page.evaluate( () => document.getElementById("amountFrom").value = "")
+    await page.type(
+      "#amountFrom",
+      parseInt(Number(dados.valor) * 100).toString()
+    );
+
+    await sleep(1000);
+
+    return;
+
     console.log(
       'Aguardando até que o texto "calculando..." não esteja mais na tela...'
     );
@@ -359,7 +370,7 @@ export async function criarTransacao4p(
         console.log("Botão Arbitrum não encontrado");
       }
     });
-    
+
     // Aguardando a resposta da API e obtendo o payload PIX
     console.log("Aguardando resposta da API para obter o código PIX...");
 
