@@ -78,7 +78,7 @@ app.post("/pix", async (req, res) => {
     const dados: FormularioData = {
       ...dadosRequest,
       email: contact.email,
-      telefone: contact.phone,
+      // telefone: contact.phone,
       address: contact.wallet_address
     };
 

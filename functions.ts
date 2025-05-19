@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
 import * as proxyChain from "proxy-chain";
+import { proxies } from "./proxies";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -27,102 +28,7 @@ async function getProxy() {
   const user = "jzvdevlw";
   const password = "3vb0ksClAMZcKo";
 
-  let arrayProxy = [
-    {
-      ip: "104.239.40.169",
-      port: "6788",
-    },
-    {
-      ip: "104.253.212.118",
-      port: "5528",
-    },
-    {
-      ip: "185.15.179.67",
-      port: "6033",
-    },
-    {
-      ip: "45.39.15.109",
-      port: "6539",
-    },
-    {
-      ip: "104.143.229.38",
-      port: "5966",
-    },
-    {
-      ip: "45.94.136.69",
-      port: "6845",
-    },
-    {
-      ip: "104.252.44.134",
-      port: "6064",
-    },
-    {
-      ip: "168.199.227.92",
-      port: "6871",
-    },
-    {
-      ip: "172.98.178.74",
-      port: "6147",
-    },
-    {
-      ip: "191.101.121.159",
-      port: "6433",
-    },
-    {
-      ip: "104.253.55.106",
-      port: "5536",
-    },
-    {
-      ip: "191.101.94.159",
-      port: "6129",
-    },
-    {
-      ip: "168.199.132.81",
-      port: "6153",
-    },
-    {
-      ip: "172.98.169.170",
-      port: "6594",
-    },
-    {
-      ip: "45.39.15.93",
-      port: "6523",
-    },
-    {
-      ip: "147.185.250.14",
-      port: "6800",
-    },
-    {
-      ip: "88.218.105.134",
-      port: "5898",
-    },
-    {
-      ip: "191.101.94.37",
-      port: "6007",
-    },
-    {
-      ip: "104.252.44.30",
-      port: "5960",
-    },
-    {
-      ip: "45.94.136.209",
-      port: "6985",
-    },
-    {
-      ip: "168.199.186.188",
-      port: "6611",
-    },
-    {
-      ip: "104.143.229.3",
-      port: "5931",
-    },
-    {
-      ip: "191.101.121.63",
-      port: "6337",
-    },
-  ];
-
-  let randomProxy = arrayProxy[Math.floor(Math.random() * arrayProxy.length)];
+  let randomProxy = proxies[Math.floor(Math.random() * proxies.length)];
   const ip = randomProxy.ip;
   const port = randomProxy.port;
 
@@ -157,13 +63,13 @@ export async function criarTransacao4p(
 
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: true, // Definido como false para visualizar o navegador em ação
+    headless: false, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      `--proxy-server=${await getProxy()}`,
+      // `--proxy-server=${await getProxy()}`,
     ], // Inicia o navegador maximizado
   });
 
@@ -265,6 +171,32 @@ export async function criarTransacao4p(
     // Aguarda um momento para a página carregar completamente
     await sleep(2000);
     
+    // Verifica se o modal está presente e clica no botão "Estou ciente. Continuar"
+    const modalSelector = 'button:contains("Estou ciente. Continuar")';
+    const modalExists = await page.evaluate((selector) => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      return buttons.some((button) =>
+        button.textContent.includes("Estou ciente")
+      );
+    }, modalSelector);
+
+    if (modalExists) {
+      console.log(
+        'Modal encontrado. Clicando no botão "Estou ciente. Continuar"...'
+      );
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const targetButton = buttons.find((button) =>
+          button.textContent.includes("Estou ciente. Continuar")
+        );
+        if (targetButton) targetButton.click();
+      });
+      await sleep(2000); // Aguarda o modal fechar
+    } else {
+      console.log("Modal não encontrado ou já fechado.");
+    }
+
+
     // Busca e clica no botão que contém "Arbitrum"
     console.log('Abrindo a tela de seleção de criptomoeda...');
     await page.evaluate(() => {
@@ -334,6 +266,10 @@ export async function criarTransacao4p(
 
     console.log('Preenchendo os dados do comprador...');
     await page.type('input[placeholder*="nome"]', dados.nomeCompleto);
+    await sleep(1000);
+
+    console.log('Preenchendo os dados do comprador...');
+    await page.type('#phone', dados.telefone.replace(/\D/g, ''));
     await sleep(1000);
 
     console.log('Preenchendo o e-mail do comprador...');
