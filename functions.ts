@@ -63,13 +63,13 @@ export async function criarTransacao4p(
 
   // Inicializa o navegador
   const browser = await puppeteer.launch({
-    headless: false, // Definido como false para visualizar o navegador em ação
+    headless: true, // Definido como false para visualizar o navegador em ação
     defaultViewport: null,
     args: [
       "--start-maximized",
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      // `--proxy-server=${await getProxy()}`,
+      `--proxy-server=${await getProxy()}`,
     ], // Inicia o navegador maximizado
   });
 
